@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getCJAccessToken } from "./cj";
-import { prisma } from "../lib/prisma";
+import { prisma } from "./prisma";
 
 export async function syncCJProducts(limit = 10) {
   try {
