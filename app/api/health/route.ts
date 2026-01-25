@@ -1,3 +1,5 @@
-export async function GET() {
-  return Response.json({ ok: true, time: new Date().toISOString() });
+import { NextResponse } from "next/server";
+export const runtime = "nodejs";
+export function GET() {
+  return NextResponse.json({ ok: true, ts: Date.now() }, { headers: { "Cache-Control": "no-store" } });
 }

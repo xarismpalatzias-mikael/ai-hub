@@ -1,33 +1,50 @@
-import type { NextAuthOptions } from "next-auth";
-import GitHubProvider from "next-auth/providers/github";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+// auth.ts  (root of the project)
 
-const prisma = new PrismaClient();
+import type { NextAuthOptions } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt" },
   providers: [
-    GitHubProvider({
-      clientId: process.env.GITHUB_ID || "",
-      clientSecret: process.env.GITHUB_SECRET || "",
-      allowDangerousEmailAccountLinking: true as any,
+    // GOOGLE LOGIN
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
+
+    // OPTIONAL: old email/password login
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        username: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(creds) {
-        if (!creds?.email || !creds.password) return null;
-        const user = await prisma.user.findUnique({ where: { email: creds.email } });
-        if (!user?.passwordHash) return null;
-        const ok = await bcrypt.compare(creds.password, user.passwordHash);
-        if (!ok) return null;
-        return { id: user.id, name: user.name ?? "", email: user.email, role: user.role as any };
+      async authorize(credentials) {
+        if (
+          credentials?.username === process.env.ADMIN_NAME &&
+          credentials?.password === process.env.ADMIN_PASSWORD
+        ) {
+          return {
+            id: "admin",
+            name: "Admin",
+            email: process.env.ADMIN_EMAILS,
+          };
+        }
+        return null;
       },
     }),
   ],
+
+  callbacks: {
+    async signIn({ user }) {
+      // only allow admin emails
+      const allowed = (process.env.ADMIN_EMAILS || "")
+        .split(",")
+        .map((e) => e.trim())
+        .filter(Boolean);
+
+      if (!user.email) return false;
+      return allowed.includes(user.email);
+    },
+  },
 };

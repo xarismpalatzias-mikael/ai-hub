@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server";
-import { syncTikTokAds } from "@/lib/tiktok";
+// import prisma from "@/lib/prisma"; // when you wire real metrics, use this
 
+export const runtime = "nodejs";
 export async function GET() {
-  try {
-    const count = await syncTikTokAds();
-    return NextResponse.json({ ok: true, count });
-  } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message || String(e) },
-      { status: 500 }
-    );
-  }
+  // placeholder – confirm cron + logs without hitting TikTok yet
+  return NextResponse.json({ ok: true, synced: 0, mode: "production-stub" });
 }

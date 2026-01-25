@@ -1,0 +1,14 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/" }
+  ]
+}
+{
+  "crons": [
+    { "path": "/api/brain/daily", "schedule": "0 6 * * *" },
+    { "path": "/api/tiktok/sync", "schedule": "*/30 7-22 * * *" }
+  ]
+}

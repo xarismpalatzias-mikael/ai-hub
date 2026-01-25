@@ -4,44 +4,143 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:./dev.db"
+}
+
+model AdPerformance {
+  id          String   @id @default(cuid())
+  adId        String   @unique
+  adName      String?
+  impressions Int?
+  clicks      Int?
+  spend       Float?
+  revenue     Float?
+  roas        Float?
+  ctr         Float?
+  cpc          Float?
+  cpm          Float?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Product {
-  id         String   @id @default(cuid())
-  shop       String
-  shopifyId  String   @unique
-  title      String
-  status     String?
-  price      String?
-  sku        String?
-  inventory  Int?
-  images     String?   // ✅ changed from Json to String
-  raw        String?   // ✅ changed from Json to String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
-model TikTokAuth {
   id           String   @id @default(cuid())
-  accessToken  String
-  refreshToken String?
-  tokenType    String?
-  expiresAt    DateTime?
+  cjId         String   @unique
+  name         String?
+  image        String?
+  warehouse    String?
+  title        String?
+  price        Float?
+  status       String?
+  sourceId     String?
+  supplier     String?
+  externalId   String?
+  sku          String?
+  cost         Float?
+  profit       Float?
+  currency     String?
+  sourceUrl    String?
+  mediaUrl     String?
+  thumbnailUrl String? // main thumbnail image
+  shippingDays Int?
+  inventory    Int?
+    // --- AI Brain fields (Stage 14/15) ---
+  aiState        AiProductState @default(NEW)
+  aiScore        Float?         // 0-100 score
+  aiNotes        String?        // short explanation why it scored
+  aiLastScoredAt DateTime?      // when brain last evaluated
+  isWinner       Boolean        @default(false)
+
+  // --- Meta performance rollups (last 7 days / last 30 days) ---
+  last7Spend      Float?
+  last7Revenue    Float?
+  last7Roas       Float?
+  last7Ctr        Float?
+  last7Cpc        Float?
+  last7Cpm        Float?
+  last7Purchases  Int?
+
+  last30Spend     Float?
+  last30Revenue   Float?
+  last30Roas      Float?
+  last30Ctr       Float?
+  last30Cpc       Float?
+  last30Cpm       Float?
+  last30Purchases Int?
+
+  // --- Budget control for testing/scaling ---
+  dailyBudget     Float?
+  budgetCap       Float?
+  cooloffUntil    DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
-model AdPerformance {
-  id          Int    @id @default(autoincrement())
-  adId        String @unique   // upsert key used in lib/tiktok.ts
-  adName      String
-  status      String?
-  spend       Float  @default(0)
-  impressions Int    @default(0)
-  clicks      Int    @default(0)
-  ctr         Float  @default(0)
-  conversions Int    @default(0)
-  dateFrom    DateTime?
-  dateTo      DateTime?
-  updatedAt   DateTime @updatedAt
+  enum AiProductState {
+  NEW
+  TESTING
+  SCALING
+  PAUSED
+  KILLED
+}
+
+model SpyProduct {
+  id          String    @id @default(cuid())
+  source      String // "Minea", "TikTok", "CJ"
+  externalId  String? // ad/product id from Minea (or other source)
+  title       String?
+  adUrl       String?
+  storeUrl    String?
+  country     String?
+  impressions Int?
+  likes       Int?
+  comments    Int?
+  shares      Int?
+  thumbnail   String?
+  price       Float?
+  currency    String?
+  firstSeen   DateTime?
+  lastSeen    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  raw         Json? // full source payload for debugging
+
+  @@unique([source, externalId]) // double @ for model-level index
+}
+
+model AIBrain {
+  id          String   @id @default(cuid())
+  adId        String   @unique
+  productId   String?
+  score       Float?
+  state       String?
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+    // ---- Stage 17A: Execution Intent (SAFE MODE) ----
+  desiredBudget   Float?
+  desiredStatus   String?   // "ACTIVE" | "PAUSED"
+  lastExecutedAt  DateTime?
+}
+
+
+model BrainRunLog {
+  id          String   @id @default(cuid())
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  durationMs  Int?
+  ok          Boolean  @default(false)
+  mode        String?          // e.g., "manual", "cron"
+  note        String?          // free text summary
+  error       String?          // truncated error text if failed
+
+  // Metrics snapshot
+  adsSeen     Int?             // AdPerformance counted
+  brainsSeen  Int?             // AIBrain counted before run
+  winnersPicked Int?           // how many moved to TESTING/SCALING, etc.
+  budgetTotal Float?           // BRAIN_DAILY_BUDGET at run time
+  budgetPerAd Float?
+
+  meta        Json?            // anything else you want
+
+  @@index([startedAt], map: "idx_BrainRunLog_startedAt")
 }

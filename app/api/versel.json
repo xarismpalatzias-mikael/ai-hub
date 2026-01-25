@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/brain/daily", "schedule": "0 9 * * *" }
+  ]
+}
